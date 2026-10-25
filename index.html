@@ -369,6 +369,13 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .result-best {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+    }
+
     .result-message {
       max-width: 38ch;
       margin: 9px auto 23px;
@@ -449,6 +456,7 @@
       <div class="reaction" id="reaction" aria-hidden="true"></div>
       <h2 id="result-title" tabindex="-1"></h2>
       <p class="result-score" id="result-score"></p>
+      <p class="result-best" id="result-best"></p>
       <p class="result-message" id="result-message"></p>
       <button class="restart-button" id="restart-button" type="button">Fly again <span aria-hidden="true">↻</span></button>
     </section>
@@ -524,15 +532,31 @@
     const questionElement = document.querySelector("#question");
     const questionCount = document.querySelector("#question-count");
     const scoreElement = document.querySelector("#score");
+    const resultBest = document.querySelector("#result-best");
     const progressTrack = document.querySelector("#progress-track");
     const progressValue = document.querySelector("#progress-value");
     const answersElement = document.querySelector("#answers");
     const feedbackElement = document.querySelector("#feedback");
     const nextButton = document.querySelector("#next-button");
     const keyboardNote = document.querySelector("#keyboard-note");
+    const personalBestStorageKey = "orbit-check-personal-best";
     let currentQuestion = 0;
     let score = 0;
     let answered = false;
+    let personalBest = 0;
+    let personalBestStorageAvailable = true;
+
+    try {
+      const storedPersonalBest = window.localStorage.getItem(personalBestStorageKey);
+      if (storedPersonalBest !== null) {
+        const parsedPersonalBest = Number(storedPersonalBest);
+        if (storedPersonalBest.trim() !== "" && Number.isInteger(parsedPersonalBest) && parsedPersonalBest >= 0 && parsedPersonalBest <= questions.length) {
+          personalBest = parsedPersonalBest;
+        }
+      }
+    } catch {
+      personalBestStorageAvailable = false;
+    }
 
     function renderQuestion() {
       const item = questions[currentQuestion];
@@ -602,6 +626,15 @@
     }
 
     function showResults() {
+      if (personalBestStorageAvailable && score > personalBest) {
+        try {
+          window.localStorage.setItem(personalBestStorageKey, String(score));
+          personalBest = score;
+        } catch {
+          personalBestStorageAvailable = false;
+        }
+      }
+
       quizPanel.hidden = true;
       resultsPanel.hidden = false;
       keyboardNote.hidden = true;
@@ -617,6 +650,9 @@
       document.querySelector("#reaction").textContent = reaction;
       document.querySelector("#result-title").textContent = title;
       document.querySelector("#result-score").textContent = `${score} / ${questions.length} correct`;
+      resultBest.textContent = personalBestStorageAvailable
+        ? `Personal best: ${personalBest} / ${questions.length}`
+        : "Personal best could not be saved on this device.";
       document.querySelector("#result-message").textContent = message;
       document.querySelector("#result-title").focus();
     }
